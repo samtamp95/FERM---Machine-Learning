@@ -72,6 +72,8 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, rando
 #setting why value for the backward elimination
 y=y_train
 
+
+'''            For Backwards Elimnation '''
 import statsmodels.formula.api as sm
 def backwardElimination(x, SL):
     numVars = len(x[0])
@@ -119,7 +121,55 @@ y_pred.columns = ['Predicted']
 #y_pred.to_csv('predicted.csv')
 
 
+'''                  STEP WISE REGRESSION    '''
 
+#only get take the ones needed to do calculation
+X = Data.iloc[:, Data.columns != 'oibdp']
+
+def stepwise_selection(X, y, 
+                       initial_list=[], 
+                       threshold_in=0.01, 
+                       threshold_out = 0.05, 
+                       verbose=True):
+
+    included = list(initial_list)
+    while True:
+        changed=False
+        # forward step
+        #notes: 
+        #check OLS see if it fits see if it fits threshold
+        #repeat and delete
+        excluded = list(set(X.columns)-set(included))
+        new_pval = pd.Series(index=excluded)
+        for new_column in excluded:
+            model = sm.OLS(y, sm.add_constant(pd.DataFrame(X[included+[new_column]]))).fit()
+            new_pval[new_column] = model.pvalues[new_column]
+        best_pval = new_pval.min()
+        if best_pval < threshold_in:
+            best_feature = new_pval.argmin()
+            included.append(best_feature)
+            changed=True
+
+
+        # backward step
+        #double checking OLS incase there needs to be backwards deleteion
+        model = sm.OLS(y, sm.add_constant(pd.DataFrame(X[included]))).fit()
+        # use all coefs except intercept
+        pvalues = model.pvalues.iloc[1:]
+        worst_pval = pvalues.max() # null if pvalues is empty
+        if worst_pval > threshold_out:
+            changed=True
+            worst_feature = pvalues.argmax()
+            included.remove(worst_feature)
+        if not changed:
+            break
+    return included
+
+
+result = stepwise_selection(X, y)
+
+print('resulting features:')
+print(result)
 
 
 
